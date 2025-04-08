@@ -23,7 +23,7 @@ async def update_profile_name():
 
     while True:
         current_time = get_tehran_time()
-        new_name = f"ArashR {current_time}"
+        new_name = f".𝑨𝒓𝒂𝒔𝒉𝑹. {current_time}"
         await client(functions.account.UpdateProfileRequest(
             first_name=new_name
         ))
