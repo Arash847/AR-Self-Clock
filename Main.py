@@ -1,55 +1,33 @@
-import asyncio
-from telethon import TelegramClient, functions
+from telethon import TelegramClient, functions, types
 from datetime import datetime
 import pytz
-import time
-from keep_alive import keep_alive  # برای فعال موندن رپل
+import asyncio
+import os
 
-# مشخصات حساب (حتماً جایگزین کن)
-api_id = 24711413      # <-- آیدی API خودت
-api_hash = '10e258eafb4f66acf2f829cd3819dc7f'  # <-- هش API خودت
-session_name = 'clock_selfbot'
-base_name = ".𝑨𝒓𝒂𝒔𝒉𝑹."
+# Your API ID and Hash from environment variables
+api_id = os.getenv('API_ID')
+api_hash = os.getenv('API_HASH')
 
-# فونت بولد برای اعداد ساعت
-def bold_numbers(text):
-    bold_digits = {
-        '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯',
-        '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳',
-        '8': '𝟴', '9': '𝟵', ':': ':'
-    }
-    return ''.join(bold_digits.get(char, char) for char in text)
+# Your phone number from environment variable
+phone_number = os.getenv('PHONE_NUMBER')
 
-# تأخیر تا شروع دقیق دقیقه بعد
-def sleep_until_next_minute():
-    now = time.time()
-    time_to_wait = 60 - (now % 60)
-    time.sleep(time_to_wait)
-
-client = TelegramClient(session_name, api_id, api_hash)
-
-async def main():
-    await client.start()
+# Function to get current time in Tehran timezone
+def get_tehran_time():
     tehran_tz = pytz.timezone('Asia/Tehran')
+    return datetime.now(tehran_tz).strftime('%H:%M')
+
+async def update_profile_name():
+    # Create the client and connect
+    client = TelegramClient('session_name', api_id, api_hash)
+    await client.start(phone_number)
 
     while True:
-        now = datetime.now(tehran_tz).strftime("%H:%M")
-        bold_time = bold_numbers(now)
-        full_name = f"{base_name} {bold_time}"
-        try:
-            me = await client.get_me()
-            last_name = me.last_name or ""
-            await client(functions.account.UpdateProfileRequest(
-                first_name=full_name,
-                last_name=last_name
-            ))
-            print(f"آپدیت شد: {full_name}")
-        except Exception as e:
-            print("خطا:", e)
+        current_time = get_tehran_time()
+        new_name = f"ArashR {current_time}"
+        await client(functions.account.UpdateProfileRequest(
+            first_name=new_name
+        ))
+        await asyncio.sleep(60)  # Wait for 1 minute
 
-        sleep_until_next_minute()
-
-# اجرای دائمی در رپل
-if __name__ == "__main__":
-    keep_alive()
-    asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(update_profile_name())
