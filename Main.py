@@ -1,33 +1,52 @@
-from telethon import TelegramClient, functions, types
+import asyncio
+from telethon import TelegramClient
+from telethon.sessions import SQLiteSession
+from telethon.tl.functions.account import UpdateProfileRequest
 from datetime import datetime
 import pytz
-import asyncio
-import os
+import time
+from keep_alive import keep_alive
 
-# Your API ID and Hash from environment variables
-api_id = os.getenv('API_ID')
-api_hash = os.getenv('API_HASH')
+# اطلاعات اتصال
+api_id = 24711413        # جایگزین کن
+api_hash = '10e258eafb4f66acf2f829cd3819dc7f'  # جایگزین کن
 
-# Your phone number from environment variable
-phone_number = os.getenv('PHONE_NUMBER')
+# استفاده از فایل session آپلودشده
+session_file = "arash_session.session"
+client = TelegramClient(SQLiteSession(session_file), api_id, api_hash)
 
-# Function to get current time in Tehran timezone
-def get_tehran_time():
-    tehran_tz = pytz.timezone('Asia/Tehran')
-    return datetime.now(tehran_tz).strftime('%H:%M')
+# bold کردن ساعت
+def bold_numbers(text):
+    bold_digits = {
+        '0': '𝟬', '1': '𝟭', '2': '𝟮', '3': '𝟯',
+        '4': '𝟰', '5': '𝟱', '6': '𝟲', '7': '𝟳',
+        '8': '𝟴', '9': '𝟵', ':': ':'
+    }
+    return ''.join(bold_digits.get(char, char) for char in text)
 
-async def update_profile_name():
-    # Create the client and connect
-    client = TelegramClient('session_name', api_id, api_hash)
-    await client.start(phone_number)
+# اجرای دقیق رأس هر دقیقه
+def wait_until_next_minute():
+    now = time.time()
+    wait = 60 - (now % 60)
+    time.sleep(wait)
 
+async def update_clock():
+    await client.connect()
+    if not await client.is_user_authorized():
+        print("خطا: session معتبر نیست.")
+        return
     while True:
-        current_time = get_tehran_time()
-        new_name = f".𝑨𝒓𝒂𝒔𝒉𝑹. {current_time}"
-        await client(functions.account.UpdateProfileRequest(
-            first_name=new_name
-        ))
-        await asyncio.sleep(60)  # Wait for 1 minute
+        tehran_time = datetime.now(pytz.timezone("Asia/Tehran")).strftime("%H:%M")
+        bold_time = bold_numbers(tehran_time)
+        new_name = f".𝑨𝒓𝒂𝒔𝒉𝑹. {bold_time}"
+        try:
+            await client(UpdateProfileRequest(first_name=new_name))
+            print("آپدیت شد:", new_name)
+        except Exception as e:
+            print("خطا:", e)
+        wait_until_next_minute()
 
-if __name__ == '__main__':
-    asyncio.run(update_profile_name())
+keep_alive()
+
+if __name__ == "__main__":
+    asyncio.run(update_clock())
